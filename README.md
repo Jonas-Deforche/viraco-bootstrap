@@ -58,8 +58,6 @@ sudo apt-get update -y && sudo apt-get install -y ca-certificates curl nano && \
 sudo curl -fsSL https://raw.githubusercontent.com/Jonas-Deforche/viraco-bootstrap/main/target-node/bootstrap_target_node.sh -o /root/bootstrap_target_node.sh && \
 sudo chmod +x /root/bootstrap_target_node.sh && \
 sudo /root/bootstrap_target_node.sh
-
-
 ```
 
 What happens next:
@@ -90,11 +88,10 @@ This script:
 
 ### One command to paste on the CONTROL node
 ```bash
-sudo apt-get update -y && sudo apt-get install -y ca-certificates curl nano && \\
-curl -fsSL https://raw.githubusercontent.com/Jonas-Deforche/viraco-bootstrap/main/control-node/bootstrap_control_node.sh -o /root/bootstrap_control_node.sh && \\
-sudo chmod +x /root/bootstrap_control_node.sh && \\
+sudo apt-get update -y && sudo apt-get install -y ca-certificates curl nano && \
+sudo curl -fsSL https://raw.githubusercontent.com/Jonas-Deforche/viraco-bootstrap/main/control-node/bootstrap_control_node.sh -o /root/bootstrap_control_node.sh && \
+sudo chmod +x /root/bootstrap_control_node.sh && \
 sudo /root/bootstrap_control_node.sh
-
 ```
 
 ### Optional overrides
