@@ -8,12 +8,12 @@
 # - Installs python3 if missing (recommended for Ansible)
 #
 # Usage examples:
-#   sudo ./pre_bootstrap.sh
-#   sudo ./pre_bootstrap.sh --key-file /root/bootstrap/deploy_keys.txt
-#   sudo ./pre_bootstrap.sh --user deploy --key-file /root/bootstrap/deploy_keys.txt
-#   sudo ./pre_bootstrap.sh --key "ssh-ed25519 AAAA... jonas@laptop"
-#   sudo ./pre_bootstrap.sh --no-python
-#   sudo ./pre_bootstrap.sh --no-sshd
+#   sudo ./bootstrap_target_node.sh
+#   sudo ./bootstrap_target_node.sh --key-file /root/bootstrap/deploy_keys.txt
+#   sudo ./bootstrap_target_node.sh --user deploy --key-file /root/bootstrap/deploy_keys.txt
+#   sudo ./bootstrap_target_node.sh --key "ssh-ed25519 AAAA... jonas@laptop"
+#   sudo ./bootstrap_target_node.sh --no-python
+#   sudo ./bootstrap_target_node.sh --no-sshd
 #
 # Keyfile format:
 #   - one public key per line
@@ -34,14 +34,14 @@ DEFAULT_KEYS=()   # optional hardcoded defaults (kept empty)
 
 SUDOERS_FILE=""
 
-log() { echo "[prebootstrap] $*"; }
+log()  { echo "[prebootstrap] $*"; }
 warn() { echo "[prebootstrap] WARN: $*" >&2; }
-err() { echo "[prebootstrap] ERROR: $*" >&2; }
+err()  { echo "[prebootstrap] ERROR: $*" >&2; }
 
 usage() {
   cat <<'EOF'
 Usage:
-  pre_bootstrap.sh [options]
+  bootstrap_target_node.sh [options]
 
 Options:
   --user <name>       Deploy user (default: deploy)
@@ -53,9 +53,9 @@ Options:
   -h, --help          Show help
 
 Examples:
-  sudo ./pre_bootstrap.sh
-  sudo ./pre_bootstrap.sh --key-file /root/bootstrap/deploy_keys.txt
-  sudo ./pre_bootstrap.sh --key "ssh-ed25519 AAAA... jonas@laptop"
+  sudo ./bootstrap_target_node.sh
+  sudo ./bootstrap_target_node.sh --key-file /root/bootstrap/deploy_keys.txt
+  sudo ./bootstrap_target_node.sh --key "ssh-ed25519 AAAA... jonas@laptop"
 EOF
 }
 
@@ -115,6 +115,16 @@ require_root_or_sudo() {
   fi
   err "This script needs root (or sudo)."
   exit 1
+}
+
+# ✅ FIX: never do "${SUDO} -u user ..." because when SUDO="" it becomes "-u ..."
+run_as_deploy() {
+  if [ "$(id -u)" -eq 0 ]; then
+    # use su when already root
+    su -s /bin/bash - "${DEPLOY_USER}" -c "$*"
+  else
+    sudo -u "${DEPLOY_USER}" -H bash -lc "$*"
+  fi
 }
 
 detect_pkg_mgr() {
@@ -215,7 +225,8 @@ ensure_key_file_interactive() {
   ${SUDO} chmod 600 "${KEY_FILE}"
 
   if command -v nano >/dev/null 2>&1; then
-    nano "${KEY_FILE}"
+    # ✅ FIX: open with sudo when needed (root-owned path)
+    ${SUDO} nano "${KEY_FILE}"
   else
     err "nano is not installed and no --key-file was provided."
     err "Install nano or re-run with: --key-file <path>"
@@ -242,7 +253,9 @@ read_keys_from_file() {
 
 ensure_ssh_keys() {
   local home_dir ssh_dir auth_keys
-  home_dir="$(${SUDO} getent passwd "${DEPLOY_USER}" | cut -d: -f6)"
+
+  # ✅ FIX: no need for sudo here; getent works as root or normal user.
+  home_dir="$(getent passwd "${DEPLOY_USER}" | cut -d: -f6)"
   if [ -z "${home_dir}" ]; then
     err "Could not determine home directory for ${DEPLOY_USER}"
     exit 1
@@ -262,8 +275,8 @@ ensure_ssh_keys() {
   local added=0
   for k in "${DEPLOY_KEYS[@]}"; do
     [ -n "${k}" ] || continue
-    # avoid duplicates
-    if ${SUDO} -u "${DEPLOY_USER}" grep -qxF "${k}" "${auth_keys}"; then
+    # ✅ FIX: check duplicates as DEPLOY_USER without "${SUDO} -u ..."
+    if run_as_deploy "grep -qxF $(printf "%q" "${k}") ${auth_keys}"; then
       continue
     fi
     printf "%s\n" "${k}" | ${SUDO} tee -a "${auth_keys}" >/dev/null
@@ -300,6 +313,7 @@ ensure_sshd_running() {
     return 0
   fi
 
+  # Best-effort across distros
   if ${SUDO} systemctl list-unit-files 2>/dev/null | grep -qE '^ssh\.service'; then
     log "Ensuring ssh service is enabled and running"
     ${SUDO} systemctl enable --now ssh >/dev/null 2>&1 || true
@@ -313,7 +327,8 @@ ensure_sshd_running() {
 
 self_test() {
   log "Self-test: deploy user + passwordless sudo"
-  ${SUDO} -u "${DEPLOY_USER}" -H bash -lc "whoami && sudo -n true && echo SUDO_OK"
+  # ✅ FIX: run as deploy user safely
+  run_as_deploy "whoami && sudo -n true && echo SUDO_OK"
   log "Done."
 }
 
