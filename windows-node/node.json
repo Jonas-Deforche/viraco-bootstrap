@@ -1,6 +1,8 @@
 {
   "hostname": "VIR-LUBBEEK-01",
   "wgTunnel": "wg0",
+  "wgConfigPath": "C:\\Viraco\\config\\wg0.conf",
   "splashtopUrl": "https://my.splashtop.eu/team_deployment/download/PP3HYT3WWT7PEU",
+  "rustdeskUrl": "",
   "steam": true
 }
