@@ -1,0 +1,58 @@
+<# 
+  install_steam.ps1
+  - Downloadt SteamSetup.exe
+  - Installeert Steam zo stil mogelijk
+  - Laat Steam NIET automatisch starten (optioneel)
+
+  Run:
+    powershell -ExecutionPolicy Bypass -File C:\Temp\install_steam.ps1
+#>
+
+[CmdletBinding()]
+param(
+  [string]$SteamSetupUrl = "https://cdn.cloudflare.steamstatic.com/client/installer/SteamSetup.exe",
+  [string]$WorkDir = "C:\Temp\SteamInstall"
+)
+
+$ErrorActionPreference = "Stop"
+
+function Require-Admin {
+  $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()
+            ).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+  if (-not $isAdmin) { throw "Run dit script als Administrator." }
+}
+
+function Log($msg) {
+  Write-Host ("[{0}] {1}" -f (Get-Date -Format "yyyy-MM-dd HH:mm:ss"), $msg)
+}
+
+Require-Admin
+
+New-Item -ItemType Directory -Force -Path $WorkDir | Out-Null
+
+$SetupPath = Join-Path $WorkDir "SteamSetup.exe"
+
+Log "Downloading Steam installer..."
+Invoke-WebRequest -Uri $SteamSetupUrl -OutFile $SetupPath -UseBasicParsing
+
+$size = (Get-Item $SetupPath).Length
+Log ("Downloaded EXE size: {0} bytes" -f $size)
+if ($size -lt 500000) { throw "Installer lijkt te klein (<500KB). Download mislukt." }
+
+# SteamSetup ondersteunt doorgaans /S voor silent (NSIS)
+Log "Installing Steam (silent)..."
+$p = Start-Process -FilePath $SetupPath -ArgumentList "/S" -Wait -PassThru
+
+Log "Installer exit code: $($p.ExitCode)"
+if ($p.ExitCode -ne 0) {
+  throw "Steam install mogelijk gefaald (exit code $($p.ExitCode))."
+}
+
+# Optioneel: Steam autostart shortcut uitzetten (kan later ook manueel)
+$startup = Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs\Startup\Steam.lnk"
+if (Test-Path $startup) {
+  Log "Removing Steam autostart shortcut..."
+  Remove-Item $startup -Force
+}
+
+Log "Done."
