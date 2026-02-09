@@ -1,1 +1,3 @@
 Set-ExecutionPolicy RemoteSigned -Scope LocalMachine
+Get-ChildItem C:\Viraco\bootstrap -Filter *.ps1 | Unblock-File
+powershell.exe -ExecutionPolicy Bypass -File C:\Viraco\bootstrap\10-winrm.ps1
