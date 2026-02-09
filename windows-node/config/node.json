@@ -2,7 +2,7 @@
   "hostname": "VIR-LUBBEEK-01",
   "wgTunnel": "wg0",
   "wgConfigPath": "C:\\Viraco\\config\\wg0.conf",
-  "splashtopUrl": "https://my.splashtop.eu/team_deployment/download/PP3HYT3WWT7PEU",
+  "splashtopUrl": "https://cloudbuild.splashtop.eu/0216F08645A60158978410FEAC1A62BF/PP3HYT3WWT7PEU/b500649f0cfe0def44b1466b561a912d/3.8.0.4/Splashtop_Streamer_Windows_DEPLOY_INSTALLER_v3.8.0.4_PP3HYT3WWT7PEU.msi",
   "rustdeskUrl": "",
   "steam": true
 }
