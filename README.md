@@ -14,18 +14,23 @@ The goal:
 
 ```
 viraco-bootstrap/
-└── bootstrap/
-    ├── control-node/
-    │   └── bootstrap_control_node.sh
-    └── target-node/
-        └── bootstrap_target_node.sh
+├── control-node/
+│   └── bootstrap_control_node.sh
+├── target-node/
+│   └── bootstrap_target_node.sh
+└── windows-node/
+    ├── bootstrap/        # numbered .ps1 fragments (00-common, 10-winrm, ...)
+    └── config/
+        └── node.json
 ```
 
 ### Terminology
 - **Control node**  
   The machine where Ansible runs (CI / automation / infra controller)
 - **Target node**  
-  Any machine managed *by* Ansible (web, db, game servers, etc.)
+  Any Linux machine managed *by* Ansible (web, db, game servers, etc.)
+- **Windows node**  
+  A Windows sim-PC. Bootstrapped via PowerShell fragments in `windows-node/bootstrap/`.
 
 This follows standard Ansible terminology and avoids cloud/vendor lock-in.
 
