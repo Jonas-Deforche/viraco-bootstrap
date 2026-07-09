@@ -1,5 +1,7 @@
 # Viraco Bootstrap (Public)
 
+> README laatst gesynct: 2026-07-09 (commit 89e0fc7)
+
 This repository contains **NO secrets**.  
 It provides bootstrap scripts to prepare infrastructure nodes in a **clean, reproducible way**.
 
@@ -20,8 +22,10 @@ viraco-bootstrap/
 │   └── bootstrap_target_node.sh
 └── windows-node/
     ├── bootstrap/        # numbered .ps1 fragments (00-common, 10-winrm, ...)
+    │                     # + helper installers (installSteam, sdinstaller.ps1)
+    │                     # + `set aan` snippet to unblock & run the fragments
     └── config/
-        └── node.json
+        └── node.json     # per-node settings (hostname, WireGuard, Splashtop, ...)
 ```
 
 ### Terminology
@@ -76,6 +80,14 @@ What happens next:
 ssh-ed25519 AAAA... comment
 ```
 
+### Optional flags
+```bash
+sudo ./bootstrap_target_node.sh --key-file /root/bootstrap/deploy_keys.txt
+sudo ./bootstrap_target_node.sh --key "ssh-ed25519 AAAA... jonas@laptop"
+sudo ./bootstrap_target_node.sh --user deploy --no-python --no-sshd
+```
+The script supports apt, dnf, yum and apk based distros.
+
 ---
 
 ## 2) Bootstrap the CONTROL node (Ansible controller)
@@ -99,15 +111,41 @@ sudo chmod +x /root/bootstrap_control_node.sh && \
 sudo /root/bootstrap_control_node.sh
 ```
 
+Defaults: the private repo is cloned to `/opt/viraco-infra`, Ansible (`>=9,<11`) is installed in `/opt/ansible-venv` and symlinked into `/usr/local/bin`.
+
 ### Optional overrides
 ```bash
 sudo REPO_URL=git@github.com:Jonas-Deforche/viraco-infra.git /root/bootstrap_control_node.sh
 sudo TEST_LIMIT=prod /root/bootstrap_control_node.sh
+# Also available: CTRL_USER, KEY_DIR, REPO_BRANCH, DEST_DIR, ANSIBLE_VENV
 ```
 
 ---
 
-## 3) Secrets handling (important)
+## 3) Bootstrap a WINDOWS node (sim-PC)
+
+Not a single script but PowerShell **fragments**, run manually as Administrator:
+
+1. Copy `windows-node/bootstrap/` to `C:\Viraco\bootstrap` and `windows-node/config/node.json` to `C:\Viraco\config\node.json`
+2. Edit `node.json` (hostname, WireGuard tunnel + config path, Splashtop installer URL, RustDesk URL, `steam` flag)
+3. Unblock and run the fragments (see the `set aan` snippet):
+```powershell
+Set-ExecutionPolicy RemoteSigned -Scope LocalMachine
+Get-ChildItem C:\Viraco\bootstrap -Filter *.ps1 | Unblock-File
+powershell.exe -ExecutionPolicy Bypass -File C:\Viraco\bootstrap\10-winrm.ps1
+```
+
+Fragments (each sources `00-common.ps1` for shared helpers and reads `node.json`):
+- `10-winrm.ps1` — enable WinRM
+- `20-wireguard.ps1` — install WireGuard tunnel
+- `30-splashtop.ps1` / `35-splash.ps1` — silent install Splashtop Streamer (DEPLOY installer), optional rename + reboot
+- `60-power.ps1` — disable standby / monitor timeout / hibernate
+- `90-tag.ps1` — tag the node
+- `installSteam` / `sdinstaller.ps1` — helper installers for Steam and SD Launcher
+
+---
+
+## 4) Secrets handling (important)
 
 ### Target nodes
 - Only **public** SSH keys are pasted
@@ -129,7 +167,7 @@ No secrets are ever committed to GitHub.
 
 ---
 
-## 4) Design principles
+## 5) Design principles
 
 - Bootstrap repo is **public**
 - Infrastructure repo is **private**
@@ -141,7 +179,7 @@ No secrets are ever committed to GitHub.
 
 ---
 
-## 5) Typical workflow
+## 6) Typical workflow
 
 1. Create VM
 2. Run **target-node bootstrap**
